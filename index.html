@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple To-Do App</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#ffffff; --accent:#ff7ab6; --muted:#6b7280;
+    }
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      background:var(--bg); display:flex; align-items:flex-start; justify-content:center;
+      padding:36px;
+    }
+    .container{width:100%; max-width:680px;}
+    .card{
+      background:var(--card); border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(11,15,26,0.06);
+    }
+    h1{margin:0 0 6px; font-size:1.35rem;}
+    .small{color:var(--muted); font-size:0.95rem;margin-bottom:12px}
+    form{display:flex; gap:8px; margin-bottom:12px}
+    input[type="text"]{
+      flex:1; padding:10px 12px; border-radius:10px; border:1px solid #e6e9ef; font-size:1rem;
+      outline:none;
+    }
+    button.primary{
+      background:var(--accent); color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer;
+      font-weight:600;
+    }
+    ul{list-style:none; padding:0; margin:0}
+    li{display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px}
+    li:nth-child(odd){background:#fbfbfd}
+    .task-text{flex:1; word-break:break-word}
+    .done .task-text{opacity:0.6; text-decoration:line-through}
+    .actions button{background:none;border:none;cursor:pointer;font-weight:600}
+    .footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
+    .empty{color:var(--muted); padding:18px 0; text-align:center}
+    @media (max-width:420px){body{padding:18px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card" role="application" aria-label="To-do app">
+      <h1>Simple To-Do</h1>
+      <div class="small">Add tasks, mark done, and they’re saved in your browser automatically.</div>
+
+      <form id="task-form" aria-label="Add task">
+        <input id="task-input" type="text" placeholder="New task — press Enter or Add" aria-label="New task">
+        <button class="primary" type="submit">Add</button>
+      </form>
+
+      <ul id="task-list" aria-live="polite"></ul>
+      <div id="empty" class="empty">No tasks yet — add one above!</div>
+
+      <div class="footer">
+        <div id="count" class="small">0 tasks remaining</div>
+        <div>
+          <button id="clear-completed" title="Remove completed tasks">Clear completed</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const STORAGE_KEY = 'todo_tasks_v1';
+      const form = document.getElementById('task-form');
+      const input = document.getElementById('task-input');
+      const list = document.getElementById('task-list');
+      const empty = document.getElementById('empty');
+      const countEl = document.getElementById('count');
+      const clearBtn = document.getElementById('clear-completed');
+
+      let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+      function save(){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        render();
+      }
+
+      function render(){
+        list.innerHTML = '';
+        if(tasks.length === 0){
+          empty.style.display = 'block';
+        } else {
+          empty.style.display = 'none';
+        }
+
+        tasks.forEach(task => {
+          const li = document.createElement('li');
+          li.className = task.done ? 'done' : '';
+          li.setAttribute('data-id', task.id);
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.checked = task.done;
+          checkbox.setAttribute('aria-label','Mark task done');
+          checkbox.addEventListener('change', () => {
+            task.done = checkbox.checked;
+            save();
+          });
+
+          const text = document.createElement('div');
+          text.className = 'task-text';
+          text.textContent = task.text;
+
+          const actions = document.createElement('div');
+          actions.className = 'actions';
+
+          const del = document.createElement('button');
+          del.textContent = 'Delete';
+          del.style.color = '#ef4444';
+          del.addEventListener('click', () => {
+            tasks = tasks.filter(t => t.id !== task.id);
+            save();
+          });
+
+          li.appendChild(checkbox);
+          li.appendChild(text);
+          actions.appendChild(del);
+          li.appendChild(actions);
+          list.appendChild(li);
+        });
+
+        const remaining = tasks.filter(t => !t.done).length;
+        countEl.textContent = `${remaining} task${remaining !== 1 ? 's' : ''} remaining`;
+      }
+
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        const text = input.value.trim();
+        if(!text) return;
+        tasks.unshift({ id: Date.now().toString(), text, done:false });
+        input.value = '';
+        save();
+      });
+
+      clearBtn.addEventListener('click', () => {
+        tasks = tasks.filter(t => !t.done);
+        save();
+      });
+
+      // initial render
+      render();
+    })();
+  </script>
+</body>
+</html>
